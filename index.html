@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema de Vida</title>
+
+  <!-- Para móvil -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial;
+      padding: 15px;
+      background: #111;
+      color: white;
+    }
+
+    button {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: #333;
+      color: white;
+    }
+
+    .barra {
+      width: 100%;
+      background: #333;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    .progreso {
+      height: 20px;
+      width: 0%;
+      background: limegreen;
+      border-radius: 10px;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<h1>🎮 Sistema de Vida</h1>
+
+<!-- FINANZAS -->
+
+<h2>💰 Finanzas</h2>
+Nivel: <span id="nivelFinanzas">1</span> | XP: <span id="xpFinanzas">0</span>
+<div class="barra"><div id="barraFinanzas" class="progreso"></div></div>
+<button onclick="ganarXP('finanzas',10)">Ahorrar +10</button>
+
+<!-- DISCIPLINA -->
+
+<h2>🧠 Disciplina</h2>
+Nivel: <span id="nivelDisciplina">1</span> | XP: <span id="xpDisciplina">0</span>
+<div class="barra"><div id="barraDisciplina" class="progreso"></div></div>
+<button onclick="ganarXP('disciplina',15)">Buen hábito +15</button>
+
+<!-- SALUD -->
+
+<h2>💪 Salud</h2>
+Nivel: <span id="nivelSalud">1</span> | XP: <span id="xpSalud">0</span>
+<div class="barra"><div id="barraSalud" class="progreso"></div></div>
+<button onclick="ganarXP('salud',20)">Ejercicio +20</button>
+
+<h3>🔥 Racha: <span id="racha">0</span></h3>
+
+<button onclick="hablarMentor()">🧠 Mentor</button> <button onclick="generarLogrosIA()">🎯 Nuevos logros IA</button>
+
+<h2>📅 Misiones</h2>
+<ul id="misiones"></ul>
+
+<h2>🏆 Logros</h2>
+<ul id="logros"></ul>
+
+<h2>📢 Mensajes</h2>
+<div id="mensajes"></div>
+
+<script>
+let datos = {
+  finanzas:{nivel:1,xp:0},
+  disciplina:{nivel:1,xp:0},
+  salud:{nivel:1,xp:0}
+};
+
+let racha=0, ultimaFecha="";
+let misiones=[], fechaMisiones="";
+let logros=[
+ {texto:"🟢 Primer paso",desbloqueado:false},
+ {texto:"🔥 3 días constante",desbloqueado:false},
+ {texto:"💪 Nivel 2 salud",desbloqueado:false}
+];
+
+function ganarXP(area,xp){
+ registrarActividad();
+ let total=xp+(racha*2);
+
+ datos[area].xp+=total;
+
+ if(datos[area].xp>=100){
+   datos[area].xp=0;
+   datos[area].nivel++;
+   mensaje("🎉 Subiste nivel en "+area);
+ }
+
+ actualizar();
+ guardar();
+}
+
+function registrarActividad(){
+ let hoy=new Date().toDateString();
+ if(ultimaFecha!==hoy){
+   racha++;
+   ultimaFecha=hoy;
+   mensaje("🔥 Racha "+racha);
+ }
+}
+
+function actualizar(){
+ document.getElementById("nivelFinanzas").textContent=datos.finanzas.nivel;
+ document.getElementById("xpFinanzas").textContent=datos.finanzas.xp;
+ document.getElementById("barraFinanzas").style.width=datos.finanzas.xp+"%";
+
+ document.getElementById("nivelDisciplina").textContent=datos.disciplina.nivel;
+ document.getElementById("xpDisciplina").textContent=datos.disciplina.xp;
+ document.getElementById("barraDisciplina").style.width=datos.disciplina.xp+"%";
+
+ document.getElementById("nivelSalud").textContent=datos.salud.nivel;
+ document.getElementById("xpSalud").textContent=datos.salud.xp;
+ document.getElementById("barraSalud").style.width=datos.salud.xp+"%";
+
+ document.getElementById("racha").textContent=racha;
+
+ verificarLogros();
+ mostrarLogros();
+}
+
+function mensaje(t){
+ let p=document.createElement("p");
+ p.textContent=t;
+ document.getElementById("mensajes").appendChild(p);
+}
+
+function guardar(){
+ localStorage.setItem("vida",JSON.stringify({datos,racha,ultimaFecha,misiones,fechaMisiones,logros}));
+}
+
+function cargar(){
+ let g=JSON.parse(localStorage.getItem("vida"));
+ if(g){
+  datos=g.datos; racha=g.racha; ultimaFecha=g.ultimaFecha;
+  misiones=g.misiones||[]; fechaMisiones=g.fechaMisiones||"";
+  logros=g.logros||logros;
+ }
+ generarMisiones();
+ actualizar();
+}
+
+function generarMisiones(){
+ let hoy=new Date().toDateString();
+ if(fechaMisiones!==hoy){
+  fechaMisiones=hoy;
+  misiones=[
+   {t:"💰 No gastar impulsivamente",a:"finanzas",xp:20,c:false},
+   {t:"🧠 Tarea importante",a:"disciplina",xp:20,c:false},
+   {t:"💪 10 min ejercicio",a:"salud",xp:20,c:false}
+  ];
+ }
+ mostrarMisiones();
+}
+
+function mostrarMisiones(){
+ let ul=document.getElementById("misiones");
+ ul.innerHTML="";
+ misiones.forEach((m,i)=>{
+  let li=document.createElement("li");
+  let b=document.createElement("button");
+  b.textContent=m.c?"✔️":"Completar";
+  b.onclick=()=>completar(i);
+  li.textContent=m.t+" ";
+  li.appendChild(b);
+  ul.appendChild(li);
+ });
+}
+
+function completar(i){
+ if(!misiones[i].c){
+  misiones[i].c=true;
+  ganarXP(misiones[i].a,misiones[i].xp);
+  mensaje("🎯 "+misiones[i].t);
+ }
+}
+
+function verificarLogros(){
+ if(!logros[0].desbloqueado && (datos.finanzas.xp>0||datos.salud.xp>0)) {
+  logros[0].desbloqueado=true; mensaje("🏆 "+logros[0].texto);
+ }
+ if(!logros[1].desbloqueado && racha>=3){
+  logros[1].desbloqueado=true; mensaje("🏆 "+logros[1].texto);
+ }
+ if(!logros[2].desbloqueado && datos.salud.nivel>=2){
+  logros[2].desbloqueado=true; mensaje("🏆 "+logros[2].texto);
+ }
+}
+
+function mostrarLogros(){
+ let ul=document.getElementById("logros");
+ ul.innerHTML="";
+ logros.forEach(l=>{
+  let li=document.createElement("li");
+  li.textContent=(l.desbloqueado?"✔️ ":"❌ ")+l.texto;
+  ul.appendChild(li);
+ });
+}
+
+// IA (requiere API KEY)
+async function hablarMentor(){
+ let r=await fetch("https://api.openai.com/v1/responses",{
+ method:"POST",
+ headers:{
+  "Authorization":"Bearer TU_API_KEY",
+  "Content-Type":"application/json"
+ },
+ body:JSON.stringify({
+  model:"gpt-4.1-mini",
+  input:"Eres mentor motivador, analiza progreso y da consejo."
+ })
+ });
+ let d=await r.json();
+ mensaje("🧠 "+d.output[0].content[0].text);
+}
+
+async function generarLogrosIA(){
+ let r=await fetch("https://api.openai.com/v1/responses",{
+ method:"POST",
+ headers:{
+  "Authorization":"Bearer TU_API_KEY",
+  "Content-Type":"application/json"
+ },
+ body:JSON.stringify({
+  model:"gpt-4.1-mini",
+  input:"Crea 3 logros tipo videojuego cortos"
+ })
+ });
+ let d=await r.json();
+ d.output[0].content[0].text.split("\n").forEach(l=>{
+  if(l.trim()) logros.push({texto:l,desbloqueado:false});
+ });
+ mostrarLogros();
+}
+
+cargar();
+</script>
+
+</body>
+</html>
